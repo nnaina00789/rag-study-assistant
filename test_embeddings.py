@@ -1,12 +1,21 @@
+from pypdf import PdfReader
 from sentence_transformers import SentenceTransformer,util
+
+# load pdf nd extract text::
+reader=PdfReader("data/Congestion_Control.pdf")
+full_text=""
+for page in reader.pages:
+    full_text+=page.extract_text()
+
+# chunk the text
+chunk_size=500
+chunks=[]
+for i in range(0,len(full_text),chunk_size):
+    chunk=full_text[i:i+chunk_size]
+    chunks.append(chunk)
+print(f"Number of chunks: {len(chunks)}")
+# embeddings of real chunks instead of dummy sentences
+
 model=SentenceTransformer("all-MiniLM-L6-v2")
-sentence1="The dog ran fast"
-sentence2="The cnaine sprinted quickly"
-sentence3="I love cooking pasta"
-embeddings=model.encode([sentence1,sentence2,sentence3])
+embeddings=model.encode(chunks)
 print(f"Shape of embeddings: {embeddings.shape}")
-print(embeddings [0][:5])
-similarity_1_2=util.cos_sim(embeddings[0],embeddings[1])
-similarity_1_3=util.cos_sim(embeddings[0],embeddings[2])
-print(f"similarity between dog/canine: {similarity_1_2}")
-print(f"similarity between dog/pasta: {similarity_1_3}")
