@@ -1,7 +1,12 @@
 from pypdf import PdfReader
 from sentence_transformers import SentenceTransformer,util
-
+import os
+from dotenv import load_dotenv
+from google import genai
 # load pdf and extract text::
+
+load_dotenv()
+client=genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 reader=PdfReader("data/Congestion_Control.pdf")
 full_text=""
@@ -31,3 +36,13 @@ print(f"Similarities: {similarities}")
 best_match_index=similarities.argmax()
 print(f"Best match index: {best_match_index}")
 print(f"Best match chunk: {chunks[best_match_index]}")
+
+load_dotenv()
+client=genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+best_chunk=chunks[best_match_index]
+prompt=f"""Answer the question using only the context below.
+Context: {best_chunk}
+Question: {question}
+Answer:"""
+response=client.models.generate_content(model="gemini-3.6-flash",contents=prompt)
+print(response.text)
