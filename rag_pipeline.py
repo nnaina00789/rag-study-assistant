@@ -1,4 +1,4 @@
-
+import ollama
 from pypdf import PdfReader
 def load_pdf(path):
     reader=PdfReader(path)
@@ -36,7 +36,19 @@ def search(query,model,index,chunks,top_k=3):
     distances,indices=index.search(np.array(query_embedding),top_k)
     results=[chunks[i] for i in indices[0]]
     return results
-
+def generate_answer(query,context_chunks,model_name="llama3.2"):
+    context="\n\n".join(context_chunks)
+    prompt=f"""Answer the question using only the context below.
+    If the answer is not the context, say "I couldn't find that in the document."
+    Context:
+    {context}
+    Question: {query}
+    Answer"""
+    response=ollama.chat(
+        model=model_name,
+        messages=[{"role":"user","content":prompt}]
+    )
+    return response["message"]["content"]
 
 if __name__=="__main__":
     text=load_pdf("NAINA_12415429_summer.pdf")
@@ -50,7 +62,10 @@ if __name__=="__main__":
 
     query="what is this project about?"
 
-    results=search(query,model,index,chunks,top_k=3)
-    for i,r in enumerate(results):
-        print(f"\n-----Result{i+1}---")
-        print(r)
+    # results=search(query,model,index,chunks,top_k=3)
+    # for i,r in enumerate(results):
+    #     print(f"\n-----Result{i+1}---")
+    #     print(r)
+    results = search(query, model, index, chunks, top_k=3)
+    answer = generate_answer(query, results)
+    print("\nAnswer:\n", answer)
