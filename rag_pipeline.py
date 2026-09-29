@@ -52,20 +52,22 @@ def generate_answer(query,context_chunks,model_name="llama3.2"):
 
 if __name__=="__main__":
     text=load_pdf("NAINA_12415429_summer.pdf")
-    chunks=chunk_text(text)
+    chunks = chunk_text(text, chunk_size=800, overlap=100)
     print(f"Number of chunks: {len(chunks)}")
 
     embeddings = get_embeddings(chunks)
     print(f"Embeddings shape: {embeddings.shape}")
 
     index=build_faiss_index(embeddings)
+    # query = "What was the model's accuracy or F1 score?"
+    query = "What frontend technology was used?"
+    results = search(query, model, index, chunks, top_k=5)
 
-    query="what is this project about?"
+    print("\n--- Retrieved Chunks ---")
+    for i, r in enumerate(results):
+        print(f"\nChunk {i+1}:")
+        print(r[:200], "...")  # first 200 characters, so it's not a wall of text
 
-    # results=search(query,model,index,chunks,top_k=3)
-    # for i,r in enumerate(results):
-    #     print(f"\n-----Result{i+1}---")
-    #     print(r)
-    results = search(query, model, index, chunks, top_k=3)
     answer = generate_answer(query, results)
-    print("\nAnswer:\n", answer)
+    print("\n--- Answer ---")
+    print(answer)
