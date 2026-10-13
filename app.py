@@ -29,8 +29,13 @@ if uploaded_files:
     question = st.text_input("Ask a question about your documents")
     if question:
         with st.spinner("Thinking..."):
-            results, result_sources = search(question, model, index, chunks, sources, top_k=5)
-            answer = generate_answer(question, results)
+            try:
+                results, result_sources = search(question, model, index, chunks, sources, top_k=5)
+                answer = generate_answer(question, results)
+            except Exception as e:
+                print(repr(e))
+                st.error("The AI service is busy right now. Please try again in a minute.")
+                st.stop()
         st.subheader("Answer")
         st.write(answer)
         st.subheader("Sources")

@@ -1,4 +1,5 @@
-import ollama,os
+import os
+import time
 from pypdf import PdfReader
 def load_pdf(path):
     reader=PdfReader(path)
@@ -47,19 +48,57 @@ def search(query, model, index, chunks, sources, top_k=3):
     results = [chunks[i] for i in indices[0]]
     result_sources = [sources[i] for i in indices[0]]
     return results, result_sources
-def generate_answer(query,context_chunks,model_name="llama3.2"):
-    context="\n\n".join(context_chunks)
-    prompt=f"""Answer the question using only the context below.
-    If the answer is not the context, say "I couldn't find that in the document."
-    Context:
-    {context}
-    Question: {query}
-    Answer"""
-    response=ollama.chat(
+
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+def build_prompt(query, context_chunks):
+    context = "\n\n".join(context_chunks)
+    return f"""Answer the question using only the context below.
+If the answer is not in the context, say "I couldn't find that in the document."
+
+Context:
+{context}
+
+Question: {query}
+
+Answer:"""
+
+def generate_answer_ollama(query, context_chunks, model_name="llama3.2"):
+    import ollama
+    response = ollama.chat(
         model=model_name,
-        messages=[{"role":"user","content":prompt}]
+        messages=[{"role": "user", "content": build_prompt(query, context_chunks)}]
     )
     return response["message"]["content"]
+
+GEMINI_MODELS = ["gemini-3.6-flash","gemini-3.5-flash","gemini-3.1-flash-lite"]
+
+def generate_answer_gemini(query, context_chunks):
+    from google import genai
+    from google.genai import errors
+    client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+    prompt = build_prompt(query, context_chunks)
+    last_error = None
+    for round_number in range(3):
+        for model_name in GEMINI_MODELS:
+            try:
+                response = client.models.generate_content(model=model_name, contents=prompt)
+                return response.text
+            except errors.APIError as e:
+                last_error = e
+                if e.code < 500 and e.code != 404:
+                    raise
+        if round_number < 2:
+            time.sleep(3 * (round_number + 1))
+    raise last_error
+
+def generate_answer(query, context_chunks):
+    if os.getenv("LLM_BACKEND", "ollama") == "gemini":
+        return generate_answer_gemini(query, context_chunks)
+    return generate_answer_ollama(query, context_chunks)
 
 if __name__ == "__main__":
     chunks, sources = load_all_pdfs("data")
